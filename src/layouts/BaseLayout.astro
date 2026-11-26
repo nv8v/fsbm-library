@@ -1,0 +1,78 @@
+
+---
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = "FSBM Library — Informatique Appliquée",
+  description = "Bibliothèque de ressources académiques de la Faculté des Sciences Ben M'Sik."
+} = Astro.props;
+
+const apiUrl = import.meta.env.PUBLIC_API_URL || 'https://YOUR_WORKER.YOUR_SUBDOMAIN.workers.dev';
+const base = import.meta.env.BASE_URL;
+---
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#faf9fc" />
+
+    <title>{title}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <meta
+  id="fsbm-config"
+  data-api={apiUrl.replace(/\/$/, '')}
+  data-base={base}
+/>
+
+<script>
+  const config = document.getElementById('fsbm-config');
+
+  window.FSBM = {
+    api: config?.getAttribute('data-api') || '',
+    base: config?.getAttribute('data-base') || '/'
+  };
+</script>
+
+    <script is:inline>
+      (() => {
+        const saved = localStorage.getItem('fsbm-theme');
+        const systemDark = matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.dataset.theme =
+          saved || (systemDark ? 'dark' : 'light');
+      })();
+    </script>
+  </head>
+
+  <body>
+    <slot />
+
+    <script>
+      document.querySelectorAll('[data-theme-toggle]').forEach((button) =>
+        button.addEventListener('click', () => {
+          const next =
+            document.documentElement.dataset.theme === 'dark'
+              ? 'light'
+              : 'dark';
+
+          document.documentElement.dataset.theme = next;
+          localStorage.setItem('fsbm-theme', next);
+        })
+      );
+    </script>
+  </body>
+</html>

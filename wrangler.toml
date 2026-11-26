@@ -1,0 +1,22 @@
+name = "fsbm-library-api"
+main = "worker/src/index.ts"
+compatibility_date = "2026-11-26"
+workers_dev = true
+
+[vars]
+APP_ORIGIN = "https://YOUR_GITHUB_OWNER.github.io"
+SESSION_TTL_SECONDS = "43200"
+MAX_UPLOAD_BYTES = "15728640"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "fsbm-library"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "fsbm-library-files"
+
+[observability]
+enabled = true

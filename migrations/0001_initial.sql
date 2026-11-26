@@ -1,0 +1,20 @@
+PRAGMA foreign_keys = ON;
+CREATE TABLE faculties (id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE programmes (id TEXT PRIMARY KEY, faculty_id TEXT NOT NULL REFERENCES faculties(id), name TEXT NOT NULL, slug TEXT NOT NULL UNIQUE, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE semesters (id TEXT PRIMARY KEY, programme_id TEXT NOT NULL REFERENCES programmes(id) ON DELETE CASCADE, number INTEGER NOT NULL CHECK(number BETWEEN 1 AND 12), label TEXT NOT NULL, UNIQUE(programme_id, number));
+CREATE TABLE modules (id TEXT PRIMARY KEY, semester_id TEXT NOT NULL REFERENCES semesters(id) ON DELETE CASCADE, code TEXT, name TEXT NOT NULL, description TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE resources (id TEXT PRIMARY KEY, module_id TEXT NOT NULL REFERENCES modules(id), title TEXT NOT NULL, description TEXT, type TEXT NOT NULL CHECK(type IN ('Cours','Résumés','TD','TP','Examens','Corrigés','Projets','Autres')), object_key TEXT NOT NULL UNIQUE, file_name TEXT NOT NULL, mime_type TEXT NOT NULL, size_bytes INTEGER NOT NULL, sha256 TEXT NOT NULL, academic_year TEXT, status TEXT NOT NULL DEFAULT 'published' CHECK(status IN ('draft','published','archived')), downloads INTEGER NOT NULL DEFAULT 0, created_by TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE resource_requests (id TEXT PRIMARY KEY, programme_id TEXT REFERENCES programmes(id), semester_number INTEGER, module_name TEXT NOT NULL, resource_type TEXT NOT NULL, title TEXT NOT NULL, details TEXT, contact TEXT, status TEXT NOT NULL DEFAULT 'new' CHECK(status IN ('new','in_progress','completed','rejected')), created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE admin_users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE COLLATE NOCASE, password_hash TEXT NOT NULL, role TEXT NOT NULL CHECK(role IN ('owner','editor')), active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, last_login TEXT);
+CREATE TABLE sessions (id TEXT PRIMARY KEY, admin_id TEXT NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE, token_hash TEXT NOT NULL UNIQUE, expires_at INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE login_attempts (id TEXT PRIMARY KEY, identity TEXT NOT NULL, attempted_at INTEGER NOT NULL);
+CREATE TABLE activity_logs (id TEXT PRIMARY KEY, admin_id TEXT REFERENCES admin_users(id), action TEXT NOT NULL, target_type TEXT NOT NULL, target_id TEXT, metadata TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX idx_modules_semester ON modules(semester_id);
+CREATE INDEX idx_resources_module_status ON resources(module_id,status,type);
+CREATE INDEX idx_requests_status ON resource_requests(status,created_at);
+CREATE INDEX idx_sessions_expiry ON sessions(expires_at);
+CREATE INDEX idx_login_identity_time ON login_attempts(identity,attempted_at);
+INSERT INTO faculties (id,name) VALUES ('fsbm', 'Faculté des Sciences Ben M''Sik');
+INSERT INTO programmes (id,faculty_id,name,slug) VALUES ('informatique-appliquee','fsbm','Informatique Appliquée','informatique-appliquee');
+INSERT INTO semesters (id,programme_id,number,label) VALUES
+('ia-s1','informatique-appliquee',1,'Semestre 1'),('ia-s2','informatique-appliquee',2,'Semestre 2'),('ia-s3','informatique-appliquee',3,'Semestre 3'),('ia-s4','informatique-appliquee',4,'Semestre 4'),('ia-s5','informatique-appliquee',5,'Semestre 5'),('ia-s6','informatique-appliquee',6,'Semestre 6');

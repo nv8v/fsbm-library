@@ -1,0 +1,30 @@
+{
+  "name": "fsbm-library",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "npm run check && astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "worker:check": "tsc --noEmit -p worker/tsconfig.json",
+    "worker:dev": "wrangler dev",
+    "worker:deploy": "wrangler deploy",
+    "db:local": "wrangler d1 migrations apply fsbm-library --local",
+    "db:remote": "wrangler d1 migrations apply fsbm-library --remote",
+    "verify": "npm run check && npm run worker:check && npm run build"
+  },
+  "dependencies": {
+    "@astrojs/tailwind": "^6.0.0",
+    "astro": "^5.5.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@cloudflare/workers-types": "^5.20261125.1",
+    "autoprefixer": "^10.4.20",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3",
+    "wrangler": "^4.0.0"
+  }
+}

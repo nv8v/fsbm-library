@@ -1,0 +1,7 @@
+---
+import { semesters } from '../data/catalogue';
+const base = import.meta.env.BASE_URL;
+---
+<div class="semester-grid">
+  {semesters.map((semester) => <a class="semester-card" href={`${base}programmes/informatique-appliquee/${semester.id}/`}><span class="semester-number">S{semester.number}</span><span class="semester-name">{semester.label}</span><span class="semester-meta" data-semester-count={semester.number}>Explorer les modules</span><span class="semester-arrow" aria-hidden="true">↗</span></a>)}
+</div>
