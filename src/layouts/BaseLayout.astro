@@ -8,11 +8,10 @@ interface Props {
 }
 
 const {
-  title = "FSBM Library — Informatique Appliquée",
+  title = "FSBM Library — Bibliothèque universitaire",
   description = "Bibliothèque de ressources académiques de la Faculté des Sciences Ben M'Sik."
 } = Astro.props;
 
-const apiUrl = import.meta.env.PUBLIC_API_URL || 'https://YOUR_WORKER.YOUR_SUBDOMAIN.workers.dev';
 const base = import.meta.env.BASE_URL;
 ---
 
@@ -33,17 +32,12 @@ const base = import.meta.env.BASE_URL;
       rel="stylesheet"
     />
 
-    <meta
-  id="fsbm-config"
-  data-api={apiUrl.replace(/\/$/, '')}
-  data-base={base}
-/>
+    <meta id="fsbm-config" data-base={base} />
 
 <script>
   const config = document.getElementById('fsbm-config');
 
   window.FSBM = {
-    api: config?.getAttribute('data-api') || '',
     base: config?.getAttribute('data-base') || '/'
   };
 </script>
@@ -62,6 +56,10 @@ const base = import.meta.env.BASE_URL;
     <slot />
 
     <script>
+      const syncBrandLogos = () => document.querySelectorAll<HTMLImageElement>('[data-brand-logo]').forEach((img) => {
+        img.src = `${window.FSBM.base}${document.documentElement.dataset.theme === 'dark' ? 'fsbm-logo-light-full.png' : 'fsbm-logo-dark-full.png'}`;
+      });
+      syncBrandLogos();
       document.querySelectorAll('[data-theme-toggle]').forEach((button) =>
         button.addEventListener('click', () => {
           const next =
@@ -71,6 +69,7 @@ const base = import.meta.env.BASE_URL;
 
           document.documentElement.dataset.theme = next;
           localStorage.setItem('fsbm-theme', next);
+          document.querySelectorAll<HTMLImageElement>('[data-brand-logo]').forEach((img) => { img.src = `${window.FSBM.base}${next === 'dark' ? 'fsbm-logo-light-full.png' : 'fsbm-logo-dark-full.png'}`; });
         })
       );
     </script>

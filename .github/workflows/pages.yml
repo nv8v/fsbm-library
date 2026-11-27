@@ -21,14 +21,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      # npm install is used until a generated package-lock.json is committed.
-      # Switch this step to npm ci once the lockfile has been created.
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
-      - name: Verify Worker and frontend
-        run: npm run verify
+        run: npm ci --no-audit --no-fund
+      - name: Check and build static site
+        run: npm run build
         env:
-          PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL }}
           PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
           PUBLIC_BASE_PATH: ${{ vars.PUBLIC_BASE_PATH }}
       - name: Configure GitHub Pages

@@ -1,38 +1,343 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import SemesterGrid from '../components/SemesterGrid.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
-import { programme, resourceTypes } from '../data/catalogue';
+
+type ModuleEntry = {
+  id?: string;
+  name: string;
+  code?: string | null;
+  description?: string | null;
+  imageUrl?: string | null;
+  driveUrl: string;
+};
+type SemesterEntry = {
+  id?: string;
+  number: number;
+  label?: string;
+  description?: string | null;
+  imageUrl?: string | null;
+  modules: ModuleEntry[];
+};
+type FiliereEntry = {
+  id?: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  imageUrl?: string | null;
+  semesters: SemesterEntry[];
+};
+
 const base = import.meta.env.BASE_URL;
+const catalogueFiles = Object.values(
+  import.meta.glob('../data/catalogue/*/catalogue.json', {
+    eager: true,
+    import: 'default',
+  }),
+) as FiliereEntry[];
+
+for (const [fileIndex, filiere] of catalogueFiles.entries()) {
+  if (!filiere.name?.trim() || !filiere.slug?.trim() || !Array.isArray(filiere.semesters)) {
+    throw new Error(`Catalogue filière invalide (fichier n°${fileIndex + 1}) : name, slug et semesters sont requis.`);
+  }
+  for (const semester of filiere.semesters) {
+    if (!Number.isInteger(semester.number) || semester.number < 1 || !Array.isArray(semester.modules)) {
+      throw new Error(`Semestre invalide dans la filière « ${filiere.name} » : number et modules sont requis.`);
+    }
+    for (const module of semester.modules) {
+      let validDriveFolder = false;
+      try {
+        const drive = new URL(module.driveUrl);
+        validDriveFolder = drive.protocol === 'https:' &&
+          drive.hostname === 'drive.google.com' &&
+          /\/folders\/[^/?#]+/.test(drive.pathname) &&
+          !drive.pathname.includes('REMPLACER_PAR_ID');
+      } catch {
+        validDriveFolder = false;
+      }
+      if (!module.name?.trim() || !validDriveFolder) {
+        throw new Error(`Module invalide dans « ${filiere.name} » / semestre ${semester.number} : name et un lien HTTPS vers un dossier Google Drive sont requis.`);
+      }
+    }
+  }
+}
+
+const filieres = catalogueFiles
+  .map((filiere) => ({
+    ...filiere,
+    id: filiere.id || filiere.slug,
+    semesters: [...(filiere.semesters || [])]
+      .sort((a, b) => a.number - b.number)
+      .map((semester) => ({
+        ...semester,
+        id: semester.id || `${filiere.slug}-s${semester.number}`,
+        label: semester.label || `Semestre ${semester.number}`,
+        modules: [...(semester.modules || [])].sort((a, b) =>
+          a.name.localeCompare(b.name, 'fr'),
+        ),
+      })),
+  }))
+  .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+
+const catalogueJson = JSON.stringify(filieres).replace(/</g, '\\u003c');
 ---
-<BaseLayout>
-  <div class="site-shell">
-    <header class="topbar"><a class="brand" href={base} aria-label="FSBM Library, accueil"><span class="brand-mark">F<span>.</span></span><span class="brand-name">FSBM <strong>Library</strong><small>BIBLIOTHÈQUE UNIVERSITAIRE</small></span></a><nav class="top-nav" aria-label="Navigation principale"><a href="#semestres">Semestres</a><a href="#ressources">Ressources</a><a href="#demande">Demander un document</a></nav><div class="top-actions"><ThemeToggle /><a class="admin-link" href={`${base}admin/`}>Administration <span aria-hidden="true">↗</span></a></div></header>
-    <main>
-      <section class="hero"><div class="hero-copy"><div class="eyebrow"><span class="status-dot"></span> FACULTÉ DES SCIENCES BEN M'SIK</div><h1>Le savoir,<br />à portée de <em>clic.</em></h1><p class="hero-description">Retrouvez les supports de cours, travaux dirigés, travaux pratiques et examens de votre parcours en Informatique Appliquée.</p><a class="primary-button" href="#semestres">Explorer la bibliothèque <span aria-hidden="true">↗</span></a><div class="hero-note"><span class="note-icon">✓</span> Consultation et téléchargement libres, sans compte étudiant.</div></div><div class="hero-art" aria-hidden="true"><div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div><div class="art-card card-back"><span>FSBM</span><i>01</i></div><div class="art-card card-front"><div class="file-icon">PDF</div><div class="art-lines"><b></b><b></b><b></b></div><span class="art-card-caption">Ressources académiques</span></div><div class="art-stamp">APPRENDRE<br />· PARTAGER ·</div></div></section>
-      <section class="programme-strip"><div><span class="strip-label">ÉTABLISSEMENT</span><strong>Faculté des Sciences Ben M'Sik</strong></div><div><span class="strip-label">FILIÈRE</span><strong>{programme.name}</strong></div><div><span class="strip-label">SEMESTRES</span><strong>S1 — S6</strong></div></section>
-      <section class="section-block" id="semestres"><div class="section-heading"><div><div class="eyebrow">VOTRE PARCOURS</div><h2>Choisir un semestre<span>.</span></h2></div><p>Parcourez les modules et leurs documents, classés pour retrouver rapidement la bonne ressource.</p></div><SemesterGrid /></section>
-      <section class="resource-search" id="ressources"><div class="section-heading"><div><div class="eyebrow">ACCÈS DIRECT</div><h2>Rechercher une ressource<span>.</span></h2></div><p>Un titre, une matière ou un type de document.</p></div><form id="search-form" class="search-form"><label class="search-field"><span class="sr-only">Rechercher</span><span aria-hidden="true">⌕</span><input id="search-query" type="search" placeholder="Ex. : algorithmique, base de données…" /></label><select id="search-type" aria-label="Type de ressource"><option value="">Tous les types</option>{resourceTypes.map(type=><option value={type}>{type}</option>)}</select><button class="primary-button" type="submit">Rechercher</button></form><div id="search-results" class="resource-results" aria-live="polite"><p class="muted">Saisissez un terme ou choisissez un type pour consulter le catalogue.</p></div></section>
-      <section class="request-banner" id="demande"><div><div class="eyebrow">CONTRIBUER À LA BIBLIOTHÈQUE</div><h2>Un document vous manque ?</h2><p>Envoyez une demande à l’équipe de la bibliothèque. Aucun compte étudiant n’est nécessaire.</p><button class="outline-button" type="button" data-open-request>Faire une demande <span aria-hidden="true">↗</span></button></div><span class="request-icon" aria-hidden="true">＋</span></section>
-      <dialog id="request-dialog" class="dialog"><form id="request-form" class="dialog-card"><div class="dialog-head"><div><div class="eyebrow">DEMANDE DE RESSOURCE</div><h2>Quel document recherchez-vous ?</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="Fermer">×</button></div><label>Semestre<select name="semester"><option value="">Non précisé</option>{Array.from({length:6},(_,i)=><option value={i+1}>S{i+1}</option>)}</select></label><label>Module<input name="moduleName" required maxlength="120" placeholder="Nom du module" /></label><label>Document recherché<input name="title" required maxlength="160" placeholder="Titre ou sujet du document" /></label><label>Type<select name="resourceType">{resourceTypes.map(t=><option>{t}</option>)}</select></label><label>Précisions<textarea name="details" rows="3" maxlength="1000" placeholder="Année, enseignant, chapitre…"></textarea></label><label>Contact (facultatif)<input name="contact" maxlength="160" placeholder="E-mail ou autre moyen de contact" /></label><p class="form-feedback" data-request-feedback role="status"></p><button class="primary-button" type="submit">Envoyer la demande</button><p class="privacy-note">Vos coordonnées sont facultatives et servent uniquement au suivi de cette demande.</p></form></dialog>
-    </main>
-    <footer class="footer"><a class="footer-brand" href={base}>FSBM Library<span>.</span></a><span>Une initiative de partage des ressources académiques.</span><span><a href={`${base}admin/`}>Espace administration</a> · Bêta</span></footer>
+<BaseLayout title="FSBM Library — Bibliothèque universitaire">
+<div class="site-shell">
+<header class="topbar">
+  <a class="brand brand-image" href={base} aria-label="FSBM Library, accueil">
+    <picture><img data-brand-logo src={`${base}fsbm-logo-dark-full.png`} alt="FSBM Library" /></picture>
+  </a>
+  <nav class="top-nav" aria-label="Navigation principale">
+    <a href="#catalogue">Filières</a>
+    <a href="#recherche">Recherche</a>
+  </nav>
+  <div class="top-actions">
+    <ThemeToggle />
+    <a class="github-link" href="https://github.com/nv8v" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 .9a11.1 11.1 0 0 0-3.51 21.63c.55.1.76-.24.76-.53v-2.07c-3.1.67-3.76-1.32-3.76-1.32-.5-1.28-1.24-1.62-1.24-1.62-1.01-.69.08-.68.08-.68 1.12.08 1.71 1.15 1.71 1.15.99 1.7 2.6 1.21 3.23.93.1-.72.39-1.21.7-1.49-2.48-.28-5.09-1.24-5.09-5.53 0-1.22.44-2.22 1.15-3-.12-.28-.5-1.42.11-2.96 0 0 .94-.3 3.05 1.15a10.6 10.6 0 0 1 5.55 0c2.12-1.45 3.05-1.15 3.05-1.15.61 1.54.23 2.68.11 2.96.72.78 1.15 1.78 1.15 3 0 4.3-2.61 5.24-5.1 5.52.4.35.75 1.03.75 2.08V22c0 .29.2.63.76.52A11.1 11.1 0 0 0 12 .9Z"/></svg>
+    </a>
   </div>
-  <script>
-    const api = window.FSBM.api;
-    const searchForm = document.querySelector<HTMLFormElement>('#search-form');
-    const results = document.querySelector<HTMLDivElement>('#search-results');
-    const fmt = (bytes:number) => bytes < 1048576 ? `${Math.max(1,Math.round(bytes/1024))} Ko` : `${(bytes/1048576).toFixed(1)} Mo`;
-    searchForm?.addEventListener('submit', async (event) => {
-      event.preventDefault(); if (!results) return; results.innerHTML='<p class="muted">Recherche en cours…</p>';
-      const q=(document.querySelector<HTMLInputElement>('#search-query')?.value||'').trim(); const type=(document.querySelector<HTMLSelectElement>('#search-type')?.value||'');
-      try { const response=await fetch(`${api}/api/resources?${new URLSearchParams({q,type})}`); if(!response.ok) throw new Error(); const data=await response.json() as {resources:Array<{id:string,title:string,type:string,module_name:string,semester_number:number,size_bytes:number,downloads:number,academic_year:string|null}>};
-        results.replaceChildren(); if(!data.resources.length){results.innerHTML='<p class="muted">Aucune ressource publiée ne correspond à votre recherche.</p>';return;}
-        for(const item of data.resources){const card=document.createElement('article');card.className='resource-card';const meta=document.createElement('div');meta.className='resource-meta';meta.textContent=`S${item.semester_number} · ${item.module_name} · ${item.type}`;const title=document.createElement('h3');title.textContent=item.title;const foot=document.createElement('div');foot.className='resource-foot';const size=document.createElement('span');size.textContent=`PDF · ${fmt(item.size_bytes)}${item.academic_year?` · ${item.academic_year}`:''}`;const link=document.createElement('a');link.className='download-link';link.href=`${api}/api/download/${encodeURIComponent(item.id)}`;link.textContent='Télécharger ↗';foot.append(size,link);card.append(meta,title,foot);results.append(card);}
-      } catch {results.innerHTML='<p class="error-text">Le catalogue est momentanément indisponible. Réessayez plus tard.</p>';}
+</header>
+<main>
+<section class="hero">
+  <div class="hero-copy">
+    <div class="eyebrow"><span class="status-dot"></span> FACULTÉ DES SCIENCES BEN M'SIK</div>
+    <h1>Le savoir,<br />à portée de <em>clic.</em></h1>
+    <p class="hero-description">Explorez les filières, semestres et modules. Retrouvez en un seul endroit les dossiers pédagogiques partagés par les enseignants.</p>
+    <a class="primary-button" href="#catalogue">Explorer la bibliothèque ↗</a>
+    <div class="hero-note"><span class="note-icon">✓</span> Accès libre aux dossiers Google Drive, sans compte étudiant.</div>
+  </div>
+  <div class="hero-art" aria-hidden="true">
+    <div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div>
+    <div class="art-card card-back"><span>FSBM</span><i>01</i></div>
+    <div class="art-card card-front"><div class="file-icon">DRIVE</div><div class="art-lines"><b></b><b></b><b></b></div><span class="art-card-caption">Ressources académiques</span></div>
+    <div class="art-stamp">APPRENDRE<br />· PARTAGER ·</div>
+  </div>
+</section>
+
+<section class="section-block" id="catalogue">
+  <div class="section-heading">
+    <div><div class="eyebrow">VOTRE PARCOURS</div><h2>Explorer les filières<span>.</span></h2></div>
+    <p>Choisissez une filière, puis un semestre et un module pour accéder directement à son dossier Google Drive.</p>
+  </div>
+  <div id="catalogue-status" class="muted" role="status"></div>
+  <div id="filiere-list" class="semester-grid"></div>
+  <div id="hierarchy-panel" hidden>
+    <div class="breadcrumb" id="catalogue-breadcrumb"></div>
+    <div id="semester-list" class="semester-grid"></div>
+    <div id="module-list" class="resource-results"></div>
+  </div>
+</section>
+
+<section class="resource-search" id="recherche">
+  <div class="section-heading">
+    <div><div class="eyebrow">ACCÈS DIRECT</div><h2>Recherche globale<span>.</span></h2></div>
+    <p>Recherchez une filière, un semestre, un module ou une description.</p>
+  </div>
+  <form id="search-form" class="search-form">
+    <label class="search-field"><span class="sr-only">Rechercher</span><span aria-hidden="true">⌕</span><input id="search-query" type="search" minlength="2" placeholder="Nom d’une filière, d’un module…" /></label>
+    <button class="primary-button" type="submit">Rechercher</button>
+  </form>
+  <div id="search-results" class="resource-results" aria-live="polite"></div>
+</section>
+</main>
+<footer class="footer">
+  <p class="footer-verse" dir="rtl">وَقُل رَّبِّ زِدْنِي عِلْمًا 🪻</p>
+  <a class="footer-brand" href={base}>FSBM Library.</a>
+  <span>Ressources académiques en accès libre.</span>
+</footer>
+</div>
+
+<script type="application/json" id="catalogue-data" set:html={catalogueJson}></script>
+<script>
+  type ModuleEntry = { id?: string; name: string; code?: string | null; description?: string | null; imageUrl?: string | null; driveUrl: string };
+  type SemesterEntry = { id: string; number: number; label: string; description?: string | null; imageUrl?: string | null; modules: ModuleEntry[] };
+  type FiliereEntry = { id: string; name: string; slug: string; description?: string | null; imageUrl?: string | null; semesters: SemesterEntry[] };
+
+  const dataElement = document.querySelector<HTMLScriptElement>('#catalogue-data');
+  const filieres = JSON.parse(dataElement?.textContent || '[]') as FiliereEntry[];
+  const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector);
+
+  function makeCard(title: string, description: string | null | undefined, meta: string, onClick: () => void, image?: string | null) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'semester-card hierarchy-card';
+    if (image) {
+      const img = document.createElement('img');
+      img.src = image;
+      img.alt = '';
+      img.loading = 'lazy';
+      button.append(img);
+    }
+    const name = document.createElement('span');
+    name.className = 'semester-name';
+    name.textContent = title;
+    const detail = document.createElement('span');
+    detail.className = 'semester-meta';
+    detail.textContent = description || meta;
+    button.append(name, detail);
+    button.addEventListener('click', onClick);
+    return button;
+  }
+
+  function setBreadcrumb(items: Array<{ label: string; action: () => void }>) {
+    const element = $('#catalogue-breadcrumb');
+    if (!element) return;
+    element.replaceChildren();
+    items.forEach((item, index) => {
+      if (index) element.append(' / ');
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'text-link';
+      button.textContent = item.label;
+      button.addEventListener('click', item.action);
+      element.append(button);
     });
-    const dialog=document.querySelector<HTMLDialogElement>('#request-dialog'); document.querySelector('[data-open-request]')?.addEventListener('click',()=>dialog?.showModal()); document.querySelector('[data-close-dialog]')?.addEventListener('click',()=>dialog?.close());
-    document.querySelector<HTMLFormElement>('#request-form')?.addEventListener('submit',async(event)=>{event.preventDefault();const form=event.currentTarget as HTMLFormElement;const feedback=form.querySelector<HTMLElement>('[data-request-feedback]');const button=form.querySelector<HTMLButtonElement>('button[type=submit]');if(feedback)feedback.textContent='Envoi en cours…';if(button)button.disabled=true;const payload=Object.fromEntries(new FormData(form).entries());try{const response=await fetch(`${api}/api/requests`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});const data=await response.json() as {message?:string,error?:string};if(!response.ok)throw new Error(data.error||'Envoi impossible.');if(feedback)feedback.textContent=data.message||'Demande envoyée.';form.reset();}catch(error){if(feedback)feedback.textContent=error instanceof Error?error.message:'Une erreur est survenue.';}finally{if(button)button.disabled=false;}});
-    fetch(`${api}/api/catalogue`).then(r=>r.ok?r.json():null).then(data=>{if(!data?.semesters)return;for(const s of data.semesters){const node=document.querySelector<HTMLElement>(`[data-semester-count="${s.number}"]`);if(node)node.textContent=`${s.module_count} module(s) · ${s.resource_count} ressource(s)`;}}).catch(()=>{});
-  </script>
+  }
+
+  function showFilieres() {
+    const list = $('#filiere-list');
+    const panel = $('#hierarchy-panel');
+    if (!list || !panel) return;
+    panel.hidden = true;
+    list.hidden = false;
+    list.replaceChildren();
+    filieres.forEach((f) => list.append(makeCard(
+      f.name, f.description, `${f.semesters.length} semestre(s)`,
+      () => showSemesters(f), f.imageUrl,
+    )));
+  }
+
+  function showSemesters(filiere: FiliereEntry) {
+    const list = $('#filiere-list');
+    const panel = $('#hierarchy-panel');
+    const target = $('#semester-list');
+    const moduleList = $('#module-list');
+    if (!list || !panel || !target || !moduleList) return;
+    list.hidden = true;
+    panel.hidden = false;
+    target.hidden = false;
+    target.replaceChildren();
+    moduleList.hidden = true;
+    moduleList.replaceChildren();
+    filiere.semesters.forEach((semester) => target.append(makeCard(
+      semester.label, semester.description, `${semester.modules.length} module(s)`,
+      () => showModules(filiere, semester), semester.imageUrl,
+    )));
+    if (!filiere.semesters.length) target.textContent = 'Aucun semestre publié pour cette filière.';
+    setBreadcrumb([{ label: 'Toutes les filières', action: showFilieres }, { label: filiere.name, action: () => showSemesters(filiere) }]);
+  }
+
+  function showModules(filiere: FiliereEntry, semester: SemesterEntry) {
+    const target = $('#module-list');
+    const semesterList = $('#semester-list');
+    if (!target || !semesterList) return;
+    semesterList.hidden = true;
+    target.hidden = false;
+    target.replaceChildren();
+    semester.modules.forEach((module) => {
+      const card = document.createElement('a');
+      card.className = 'resource-card module-drive-card';
+      card.href = module.driveUrl;
+      card.target = '_blank';
+      card.rel = 'noopener noreferrer';
+      if (module.imageUrl) {
+        const img = document.createElement('img');
+        img.src = module.imageUrl;
+        img.alt = '';
+        img.loading = 'lazy';
+        card.append(img);
+      }
+      const heading = document.createElement('h3');
+      heading.textContent = module.name + (module.code ? ` · ${module.code}` : '');
+      const description = document.createElement('p');
+      description.className = 'muted';
+      description.textContent = module.description || 'Ouvrir le dossier pédagogique';
+      const link = document.createElement('span');
+      link.className = 'download-link';
+      link.textContent = 'Ouvrir Google Drive ↗';
+      card.append(heading, description, link);
+      target.append(card);
+    });
+    if (!semester.modules.length) target.textContent = 'Aucun module dans ce semestre pour le moment.';
+    setBreadcrumb([
+      { label: 'Toutes les filières', action: showFilieres },
+      { label: filiere.name, action: () => showSemesters(filiere) },
+      { label: semester.label, action: () => showModules(filiere, semester) },
+    ]);
+  }
+
+  function renderSearchResults(query: string) {
+    const target = $('#search-results');
+    if (!target) return;
+    target.replaceChildren();
+    if (query.length < 2) {
+      target.textContent = 'Saisissez au moins deux caractères.';
+      return;
+    }
+    const normalized = query.toLocaleLowerCase('fr');
+    const results: Array<{ kind: string; title: string; description: string; meta: string; open?: () => void; driveUrl?: string }> = [];
+    filieres.forEach((f) => {
+      if (`${f.name} ${f.description || ''}`.toLocaleLowerCase('fr').includes(normalized)) {
+        results.push({ kind: 'Filière', title: f.name, description: f.description || '', meta: 'Filière', open: () => showSemesters(f) });
+      }
+      f.semesters.forEach((s) => {
+        if (`${s.label} ${s.description || ''}`.toLocaleLowerCase('fr').includes(normalized)) {
+          results.push({ kind: 'Semestre', title: s.label, description: s.description || '', meta: `${f.name} · ${s.label}`, open: () => showModules(f, s) });
+        }
+        s.modules.forEach((m) => {
+          if (`${m.name} ${m.code || ''} ${m.description || ''}`.toLocaleLowerCase('fr').includes(normalized)) {
+            results.push({ kind: 'Module', title: m.name, description: m.description || '', meta: `${f.name} · ${s.label}`, driveUrl: m.driveUrl });
+          }
+        });
+      });
+    });
+    if (!results.length) {
+      target.textContent = 'Aucun résultat.';
+      return;
+    }
+    results.forEach((result) => {
+      const article = document.createElement('article');
+      article.className = 'resource-card';
+      const meta = document.createElement('div');
+      meta.className = 'resource-meta';
+      meta.textContent = result.meta;
+      const heading = document.createElement('h3');
+      heading.textContent = result.title;
+      const description = document.createElement('p');
+      description.className = 'muted';
+      description.textContent = result.description;
+      article.append(meta, heading, description);
+      if (result.driveUrl) {
+        const link = document.createElement('a');
+        link.className = 'download-link';
+        link.href = result.driveUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = 'Ouvrir Google Drive ↗';
+        article.append(link);
+      } else if (result.open) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'text-link';
+        button.textContent = 'Explorer';
+        button.addEventListener('click', () => {
+          result.open?.();
+          $('#catalogue')?.scrollIntoView({ behavior: 'smooth' });
+        });
+        article.append(button);
+      }
+      target.append(article);
+    });
+  }
+
+  $('#search-form')?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const query = ($('#search-query') as HTMLInputElement | null)?.value.trim() || '';
+    renderSearchResults(query);
+  });
+
+  const status = $('#catalogue-status');
+  if (status) status.textContent = filieres.length ? '' : 'Aucune filière configurée. Ajoutez un fichier catalogue.json dans src/data/catalogue/.';
+  showFilieres();
+</script>
 </BaseLayout>

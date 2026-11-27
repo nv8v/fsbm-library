@@ -1,0 +1,57 @@
+{
+  "id": "informatique-appliquee",
+  "name": "Informatique Appliquée",
+  "slug": "informatique-appliquee",
+  "description": "Catalogue des ressources pédagogiques de la filière Informatique Appliquée.",
+  "imageUrl": null,
+  "semesters": [
+    {
+      "id": "s1",
+      "number": 1,
+      "label": "Semestre 1",
+      "description": null,
+      "imageUrl": null,
+      "modules": []
+    },
+    {
+      "id": "s2",
+      "number": 2,
+      "label": "Semestre 2",
+      "description": null,
+      "imageUrl": null,
+      "modules": []
+    },
+    {
+      "id": "s3",
+      "number": 3,
+      "label": "Semestre 3",
+      "description": null,
+      "imageUrl": null,
+      "modules": []
+    },
+    {
+      "id": "s4",
+      "number": 4,
+      "label": "Semestre 4",
+      "description": null,
+      "imageUrl": null,
+      "modules": []
+    },
+    {
+      "id": "s5",
+      "number": 5,
+      "label": "Semestre 5",
+      "description": null,
+      "imageUrl": null,
+      "modules": []
+    },
+    {
+      "id": "s6",
+      "number": 6,
+      "label": "Semestre 6",
+      "description": null,
+      "imageUrl": null,
+      "modules": []
+    }
+  ]
+}

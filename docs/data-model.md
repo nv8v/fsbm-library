@@ -1,28 +1,29 @@
-# Modèle de données cible
+# Modèle de données du catalogue
 
-Schéma initial implémenté pour Cloudflare D1 in `migrations/0001_initial.sql`.
+Le catalogue public est composé de fichiers JSON, un par filière. Il n'utilise pas Cloudflare D1.
 
-- `faculties`: établissement/faculté.
-- `programmes`: parcours ou diplôme.
-- `semesters`: numéro, libellé et programme parent.
-- `modules`: code, libellé et semestre parent.
-- `resources`: métadonnées, type, statut, clé R2, taille, checksum SHA-256 et année universitaire.
-- `resource_requests`: demandes étudiantes et statut de traitement.
-- `admin_users`: identifiant interne, e-mail, hash du mot de passe, rôle et statut.
-- `sessions`: hash du jeton de session et date d’expiration.
-- `login_attempts`: limitation des tentatives de connexion et des demandes publiques.
-- `activity_logs`: acteur, action, cible, horodatage.
+## Emplacement
 
-Les documents eux-mêmes sont stockés dans R2. D1 ne conserve que leurs métadonnées et leurs clés d'objet.
+```text
+src/data/catalogue/
+├── informatique-appliquee/
+│   └── catalogue.json
+└── <slug-autre-filiere>/
+    └── catalogue.json
+```
 
-## Types initiaux
+Chaque fichier décrit une filière et contient ses semestres. Chaque semestre contient ses modules.
 
-`Cours`, `TD`, `TP`, `Examens`, `Corrigés`, `Résumés`, `Projets`, `Autres`.
+## Champs
 
-## Règles
+- Filière : `id` (facultatif), `name`, `slug`, `description` (facultatif), `imageUrl` (facultatif), `semesters`.
+- Semestre : `id` (facultatif), `number`, `label` (facultatif), `description` (facultatif), `imageUrl` (facultatif), `modules`.
+- Module : `id` (facultatif), `name`, `code` (facultatif), `description` (facultatif), `imageUrl` (facultatif), `driveUrl`.
 
-- Les semestres appartiennent à un programme.
-- Les modules appartiennent à un semestre.
-- Une ressource appartient à un module.
-- Chaque fichier R2 reçoit une clé générée côté Worker, distincte du nom de fichier fourni.
-- Une ressource doit être archivée avant sa suppression définitive.
+`driveUrl` est le lien HTTPS unique vers le dossier Google Drive du module. Le dossier Drive peut contenir les sous-dossiers Cours, TD, TP, Examens, etc. Le site ne stocke pas les documents eux-mêmes.
+
+## Validation au build
+
+Le build vérifie les informations obligatoires de la filière et des semestres. Pour chaque module, il exige un nom et une URL HTTPS sur `drive.google.com` contenant un chemin `/folders/<id>`. Un lien manquant ou invalide fait échouer le build au lieu de publier un module sans destination.
+
+Le modèle complet est disponible dans [`catalogue-template.json`](catalogue-template.json).

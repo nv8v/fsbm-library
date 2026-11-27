@@ -1,0 +1,26 @@
+{
+  "id": "nom-de-la-filiere",
+  "name": "Nom de la filière",
+  "slug": "nom-de-la-filiere",
+  "description": "Brève description de la filière.",
+  "imageUrl": null,
+  "semesters": [
+    {
+      "id": "s1",
+      "number": 1,
+      "label": "Semestre 1",
+      "description": null,
+      "imageUrl": null,
+      "modules": [
+        {
+          "id": "module-exemple",
+          "name": "Nom du module",
+          "code": null,
+          "description": "Description facultative du module.",
+          "imageUrl": null,
+          "driveUrl": "https://drive.google.com/drive/folders/REMPLACER_PAR_ID_DU_DOSSIER"
+        }
+      ]
+    }
+  ]
+}

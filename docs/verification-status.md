@@ -1,19 +1,26 @@
-# Verification status for this source handoff
+# État des vérifications — catalogue statique
 
-This file records only checks that were actually run in the authoring environment.
+## Réalisé sur cette archive
 
-## Passed
+- Le ZIP source a été extrait et la structure du projet inspectée.
+- La page d'accueil a été convertie pour charger automatiquement les fichiers `src/data/catalogue/*/catalogue.json` à la compilation.
+- Le catalogue de départ contient une filière « Informatique Appliquée » avec six semestres vides. Aucun module officiel ni lien Drive n'a été inventé.
+- Le JSON du catalogue de départ a été analysé avec succès.
+- La navigation filière → semestre → module et la recherche globale sont locales ; aucun appel à l'API n'est effectué par le site public.
+- Les liens des modules sont contrôlés au build : HTTPS, hôte `drive.google.com` et chemin de dossier `/folders/<id>`.
+- La route d'administration n'est plus publiée. Les anciens fichiers Worker/D1 restent dans le dépôt mais ne sont pas utilisés par le workflow Pages.
+- Le thème, les logos, le style responsive, le lien GitHub et la formule du pied de page ont été conservés.
 
-- The complete supplied archive was inventoried and its Astro pages, components, styles, configuration, workflow, package manifest and architecture notes were reviewed before edits.
-- `migrations/0001_initial.sql` executed successfully against SQLite in-memory; the faculty/programme rows and six S1–S6 semester rows were verified.
-- The Worker TypeScript source passed `tsc --strict` against local declarations for the Cloudflare D1/R2/Worker runtime interfaces.
-- `package.json` parsed as valid JSON.
+## Non vérifié dans cet environnement
 
-## Blocked / not verified
+- `npm ci` n'a pas pu terminer : l'accès au registre npm a expiré, puis le mode hors ligne a signalé un paquet absent du cache.
+- L'environnement de travail utilise Node 22.16.0, inférieur à la version minimale demandée par Astro 7.4.13 (Node 22.23.4). Le build Astro et `astro check` n'ont donc pas pu être exécutés ici.
 
-- Installing dependencies with npm was attempted, but the environment could not resolve `registry.npmjs.org` (`EAI_AGAIN`). No dependency installation completed.
-- Therefore the Astro checker, official Cloudflare Workers type package check, Astro production build, local Worker runtime, GitHub Actions deployment and live D1/R2 integration were **not run**.
-- A real npm lockfile could not be generated without resolving the package registry. No fabricated or incomplete `package-lock.json` is included. Run `npm install` in a network-enabled environment and commit the generated `package-lock.json`; then change the workflow install step to `npm ci`.
-- Cloudflare resource IDs, custom domains, D1/R2 provisioning and bootstrap credentials are account-specific and must be configured by the deployer.
+Avant publication, utiliser Node 22.23.4 ou plus récent dans la branche 22, puis exécuter :
 
-Do not treat this beta as production-verified until the blocked checks are completed in a network-enabled environment and the Worker is deployed against configured Cloudflare resources.
+```sh
+npm ci
+npm run build
+```
+
+Le workflow GitHub Actions exécute automatiquement ces étapes avant de publier `dist`.

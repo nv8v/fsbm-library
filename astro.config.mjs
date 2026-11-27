@@ -1,5 +1,4 @@
 import { defineConfig } from 'astro/config';
-import tailwind from '@astrojs/tailwind';
 
 const [owner, repository] = (process.env.GITHUB_REPOSITORY ?? '').split('/');
 const isProjectPage = Boolean(repository && !repository.endsWith('.github.io'));
@@ -11,7 +10,6 @@ const configuredBase = process.env.PUBLIC_BASE_PATH?.trim();
 const base = configuredBase ? (configuredBase.startsWith('/') ? configuredBase : `/${configuredBase}`) : defaultBase;
 
 export default defineConfig({
-  integrations: [tailwind()],
   output: 'static',
   site,
   base,
