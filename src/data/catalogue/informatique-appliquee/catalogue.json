@@ -11,7 +11,15 @@
       "label": "Semestre 1",
       "description": null,
       "imageUrl": null,
-      "modules": []
+      "modules": [{
+  "id": "algorithmique",
+  "name": "Algorithmique",
+  "code": null,
+  "description": "Cours, TD et travaux pratiques.",
+  "imageUrl": null,
+  "driveUrl": "https://drive.google.com/drive/folders/1yh6cKdTDQajlywVBVjuT9brA54OrjY6F"
+      }
+      ]
     },
     {
       "id": "s2",
